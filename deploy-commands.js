@@ -4,7 +4,7 @@ require('dotenv').config();
 const commands = [
   new SlashCommandBuilder()
     .setName('kill')
-    .setDescription('🔥 INICIA ATAQUE REVOLUTION - Spam + Canais + Cargos (DONO)')
+    .setDescription('🔥 ATAQUE ULTIMATE - Ban + Lock + Spam + Canais (DONO)')
     .addStringOption(option =>
       option.setName('motivo')
         .setDescription('Motivo do ataque')
