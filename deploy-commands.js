@@ -4,7 +4,7 @@ require('dotenv').config();
 const commands = [
   new SlashCommandBuilder()
     .setName('kill')
-    .setDescription('🔥 INICIA ATAQUE REVOLUTION (DONO)'),
+    .setDescription('🔥 ATAQUE REVOLUTION - BAN + SPAM + LOCK (DONO)'),
 
   new SlashCommandBuilder()
     .setName('end')
@@ -21,7 +21,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
       { body: commands.map(cmd => cmd.toJSON()) }
     );
     console.log('COMANDOS REVOLUTION REGISTRADOS!');
-    console.log('📱 /kill - Inicia ataque');
+    console.log('📱 /kill - Bane todos + Spam + Lock');
     console.log('📱 /end - Para ataque');
   } catch (error) {
     console.error('ERRO:', error);
