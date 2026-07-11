@@ -8,7 +8,20 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('end')
-    .setDescription('🛑 PARA O ATAQUE REVOLUTION (DONO)')
+    .setDescription('🛑 PARA O ATAQUE REVOLUTION (DONO)'),
+
+  new SlashCommandBuilder()
+    .setName('ia')
+    .setDescription('🤖 PERGUNTE ALGO PARA A IA REVOLUTION')
+    .addStringOption(option =>
+      option.setName('pergunta')
+        .setDescription('Digite sua pergunta')
+        .setRequired(true)
+        .setMaxLength(1000)),
+
+  new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('🏓 VERIFICAR LATÊNCIA DO BOT')
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
@@ -23,6 +36,8 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     console.log('COMANDOS REVOLUTION REGISTRADOS!');
     console.log('📱 /kill - Bane todos + Spam + Lock');
     console.log('📱 /end - Para ataque');
+    console.log('📱 /ia pergunta: - IA Revolution');
+    console.log('📱 /ping - Latência');
   } catch (error) {
     console.error('ERRO:', error);
   }
