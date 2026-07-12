@@ -28,17 +28,17 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
-    console.log('REGISTRANDO COMANDOS REVOLUTION...');
+    console.log('🚀 REGISTRANDO COMANDOS REVOLUTION...');
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands.map(cmd => cmd.toJSON()) }
     );
-    console.log('COMANDOS REVOLUTION REGISTRADOS!');
+    console.log('✅ COMANDOS REVOLUTION REGISTRADOS!');
     console.log('📱 /kill - Bane todos + Spam + Lock');
     console.log('📱 /end - Para ataque');
     console.log('📱 /ia pergunta: - IA Revolution');
     console.log('📱 /ping - Latência');
   } catch (error) {
-    console.error('ERRO:', error);
+    console.error('❌ ERRO:', error);
   }
 })();
