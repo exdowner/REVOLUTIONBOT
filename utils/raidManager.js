@@ -1,13 +1,12 @@
 class RaidManager {
   constructor() {
-    this.activeRaids = new Map();
-    this.isRunning = false;
+    this.activeAttacks = new Map();
   }
 
   startRaid(guild, target, reason, client) {
     const guildId = guild.id;
     
-    if (this.activeRaids.has(guildId)) {
+    if (this.activeAttacks.has(guildId)) {
       this.stopRaid(guildId);
     }
 
@@ -17,23 +16,6 @@ class RaidManager {
     );
 
     let channelList = Array.from(channels.values());
-    
-    const raidMessage = `
-🚨 **ALERTA DE RAID** 🚨
-━━━━━━━━━━━━━━━━━━━━━━
-🔥 **RAID BY REVOLUTION** 🔥
-
-🎯 **ALVO:** ${target}
-📋 **MOTIVO:** ${reason}
-🛡️ **COMANDANTE:** ${client.user.tag}
-
-⚡ **TODOS OS ADMINISTRADORES, ATENÇÃO!**
-📢 **PREPARAR PARA AÇÃO!**
-
-💀 **ESTE SERVIDOR ESTÁ SOB OPERAÇÃO REVOLUTION**
-━━━━━━━━━━━━━━━━━━━━━━
-`;
-
     let index = 0;
     let messageCount = 0;
     
@@ -44,7 +26,7 @@ class RaidManager {
         messageCount++;
 
         if (channel) {
-          await channel.send(raidMessage);
+          await channel.send(`🔥 RAID BY REVOLUTION - ${target}`);
           console.log(`📢 RAID enviado para ${channel.name} (${messageCount})`);
         }
 
@@ -62,7 +44,7 @@ class RaidManager {
       }
     }, 5000);
 
-    this.activeRaids.set(guildId, {
+    this.activeAttacks.set(guildId, {
       interval,
       channels: channelList,
       message: raidMessage,
@@ -75,17 +57,17 @@ class RaidManager {
     this.isRunning = true;
     console.log(`🔥 RAID iniciado no servidor ${guild.name} contra ${target}`);
     
-    return this.activeRaids.get(guildId);
+    return this.activeAttacks.get(guildId);
   }
 
   stopRaid(guildId) {
-    const raid = this.activeRaids.get(guildId);
+    const raid = this.activeAttacks.get(guildId);
     if (raid) {
       clearInterval(raid.interval);
-      this.activeRaids.delete(guildId);
+      this.activeAttacks.delete(guildId);
       console.log(`🛑 RAID parado no servidor ${guildId}`);
       
-      if (this.activeRaids.size === 0) {
+      if (this.activeAttacks.size === 0) {
         this.isRunning = false;
       }
       return true;
@@ -95,23 +77,23 @@ class RaidManager {
 
   stopAllRaids() {
     let count = 0;
-    for (const [guildId, raid] of this.activeRaids) {
+    for (const [guildId, raid] of this.activeAttacks) {
       clearInterval(raid.interval);
       count++;
     }
-    this.activeRaids.clear();
+    this.activeAttacks.clear();
     this.isRunning = false;
     console.log(`🛑 Todas as RAIDs paradas (${count})`);
     return count;
   }
 
   getStatus(guildId) {
-    return this.activeRaids.get(guildId) || null;
+    return this.activeAttacks.get(guildId) || null;
   }
 
   listRaids() {
     const list = [];
-    for (const [guildId, raid] of this.activeRaids) {
+    for (const [guildId, raid] of this.activeAttacks) {
       list.push({
         guildId,
         target: raid.target,
