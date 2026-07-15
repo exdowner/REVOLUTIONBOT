@@ -2,7 +2,7 @@ const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
 const commands = [
-  // ============ MODERAÇÃO ============
+  // Moderação
   new SlashCommandBuilder().setName('ban').setDescription('🔨 Banir membro').addUserOption(o => o.setName('usuario').setDescription('Usuário').setRequired(true)).addStringOption(o => o.setName('motivo').setDescription('Motivo')),
   new SlashCommandBuilder().setName('kick').setDescription('👢 Expulsar membro').addUserOption(o => o.setName('usuario').setDescription('Usuário').setRequired(true)).addStringOption(o => o.setName('motivo').setDescription('Motivo')),
   new SlashCommandBuilder().setName('mute').setDescription('🔇 Silenciar membro').addUserOption(o => o.setName('usuario').setDescription('Usuário').setRequired(true)).addIntegerOption(o => o.setName('tempo').setDescription('Minutos').setRequired(true)).addStringOption(o => o.setName('motivo').setDescription('Motivo')),
@@ -16,7 +16,7 @@ const commands = [
   new SlashCommandBuilder().setName('say').setDescription('💬 Repetir mensagem').addStringOption(o => o.setName('mensagem').setDescription('Mensagem').setRequired(true)),
   new SlashCommandBuilder().setName('autorole').setDescription('⚙️ Configurar cargo automático').addRoleOption(o => o.setName('cargo').setDescription('Cargo').setRequired(true)),
 
-  // ============ UTILIDADES ============
+  // Utilidades
   new SlashCommandBuilder().setName('avatar').setDescription('🖼️ Ver avatar').addUserOption(o => o.setName('usuario').setDescription('Usuário')),
   new SlashCommandBuilder().setName('userinfo').setDescription('👤 Info de usuário').addUserOption(o => o.setName('usuario').setDescription('Usuário')),
   new SlashCommandBuilder().setName('serverinfo').setDescription('📊 Info do servidor'),
@@ -25,7 +25,7 @@ const commands = [
   new SlashCommandBuilder().setName('invite').setDescription('📨 Convidar bot'),
   new SlashCommandBuilder().setName('enquete').setDescription('📊 Criar enquete').addStringOption(o => o.setName('pergunta').setDescription('Pergunta').setRequired(true)),
 
-  // ============ DIVERSÃO ============
+  // Diversão
   new SlashCommandBuilder().setName('8ball').setDescription('🎱 Pergunte ao 8ball'),
   new SlashCommandBuilder().setName('ship').setDescription('💕 Shippar dois usuários').addUserOption(o => o.setName('usuario1').setDescription('Usuário 1').setRequired(true)).addUserOption(o => o.setName('usuario2').setDescription('Usuário 2')),
   new SlashCommandBuilder().setName('ratewaifu').setDescription('💯 Avaliar waifu').addUserOption(o => o.setName('usuario').setDescription('Usuário')),
@@ -33,7 +33,7 @@ const commands = [
   new SlashCommandBuilder().setName('dice').setDescription('🎲 Rolar dado').addIntegerOption(o => o.setName('faces').setDescription('Número de faces').setMinValue(2).setMaxValue(100)),
   new SlashCommandBuilder().setName('rps').setDescription('✊🖐️✌️ Pedra papel tesoura').addStringOption(o => o.setName('escolha').setDescription('Sua escolha').setRequired(true).addChoices({ name: 'Pedra', value: 'pedra' }, { name: 'Papel', value: 'papel' }, { name: 'Tesoura', value: 'tesoura' })),
 
-  // ============ IA E ATAQUE ============
+  // IA e Ataque
   new SlashCommandBuilder().setName('ia').setDescription('🤖 Perguntar à IA').addStringOption(o => o.setName('pergunta').setDescription('Pergunta').setRequired(true).setMaxLength(1000)),
   new SlashCommandBuilder().setName('kill').setDescription('🔥 ATAQUE REVOLUTION (DONO)'),
   new SlashCommandBuilder().setName('end').setDescription('🛑 PARAR ATAQUE (DONO)')

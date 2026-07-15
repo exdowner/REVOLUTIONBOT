@@ -1,7 +1,7 @@
 {
   "name": "bot-revolution",
-  "version": "4.0.0",
-  "description": "Bot Revolution - Ataque Ultrarrapido com Canais e Cargos Infinitos",
+  "version": "5.0.0",
+  "description": "Bot Revolution - Mega Versão",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
