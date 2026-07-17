@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REVOLUTION - Painel de Controle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid #ff0000;
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #ff0000;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            letter-spacing: 3px;
+        }
+
+        .header p {
+            color: #888;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .status {
+            background: #0a0a1a;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            border-left: 4px solid #00ff00;
+        }
+
+        .status.online {
+            border-left-color: #00ff00;
+        }
+
+        .status.offline {
+            border-left-color: #ff0000;
+        }
+
+        .status .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .status .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0d0d1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #ff0000;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-group select option {
+            background: #1a1a2e;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .response.success {
+            display: block;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+
+        .response.error {
+            display: block;
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .response.loading {
+            display: block;
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid #ffff00;
+            color: #ffff00;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #444;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #ff0000;
+            text-decoration: none;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #0d0d1a;
+            border-radius: 10px;
+        }
+
+        .stats .item {
+            text-align: center;
+        }
+
+        .stats .item .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff0000;
+        }
+
+        .stats .item .desc {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🔥 REVOLUTION</h1>
+        <p>Painel de Controle do Bot</p>
+    </div>
+
+    <div class="status" id="status">
+        <div class="label">STATUS DO BOT</div>
+        <div class="value" id="statusText">🔄 Carregando...</div>
+    </div>
+
+    <div class="stats">
+        <div class="item">
+            <div class="number" id="serversCount">-</div>
+            <div class="desc">Servidores</div>
+        </div>
+        <div class="item">
+            <div class="number" id="usersCount">-</div>
+            <div class="desc">Usuários</div>
+        </div>
+        <div class="item">
+            <div class="number" id="commandsCount">-</div>
+            <div class="desc">Comandos</div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>📡 SELECIONE O SERVIDOR</label>
+        <select id="serverSelect">
+            <option value="">Carregando servidores...</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>📢 SELECIONE O CANAL</label>
+        <select id="channelSelect">
+            <option value="">Selecione um servidor primeiro</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>📝 MENSAGEM</label>
+        <textarea id="messageInput" placeholder="Digite sua mensagem aqui..."></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>🎯 MENÇÃO (opcional)</label>
+        <select id="mentionSelect">
+            <option value="none">Nenhum</option>
+            <option value="everyone">@everyone</option>
+            <option value="here">@here</option>
+        </select>
+    </div>
+
+    <button class="btn" id="sendBtn" onclick="sendMessage()">📤 ENVIAR MENSAGEM</button>
+
+    <div id="response" class="response"></div>
+
+    <div class="footer">
+        <p>🔥 REVOLUTION BOT • <a href="#" onclick="loadData()">Atualizar</a></p>
+    </div>
+</div>
+
+<script>
+    const API_URL = window.location.origin;
+
+    // ============ CARREGAR DADOS INICIAIS ============
+    async function loadData() {
+        showResponse('🔄 Carregando dados...', 'loading');
+        
+        try {
+            // Carregar status e estatísticas
+            const healthRes = await fetch(`${API_URL}/health`);
+            const healthData = await healthRes.json();
+            
+            if (healthData.status === 'online') {
+                document.getElementById('statusText').textContent = '🟢 ONLINE';
+                document.getElementById('status').className = 'status online';
+                document.getElementById('serversCount').textContent = healthData.servidores || 0;
+                document.getElementById('usersCount').textContent = healthData.usuarios || 0;
+                document.getElementById('commandsCount').textContent = healthData.comandos || 0;
+            } else {
+                document.getElementById('statusText').textContent = '🔴 OFFLINE';
+                document.getElementById('status').className = 'status offline';
+            }
+
+            // Carregar servidores
+            const serversRes = await fetch(`${API_URL}/api/servers`);
+            const servers = await serversRes.json();
+            
+            const serverSelect = document.getElementById('serverSelect');
+            serverSelect.innerHTML = '<option value="">Selecione um servidor</option>';
+            
+            if (servers.error) {
+                serverSelect.innerHTML = `<option value="">${servers.error}</option>`;
+            } else {
+                servers.forEach(server => {
+                    const option = document.createElement('option');
+                    option.value = server.id;
+                    option.textContent = server.name;
+                    serverSelect.appendChild(option);
+                });
+            }
+
+            hideResponse();
+        } catch (error) {
+            showResponse('❌ Erro ao carregar dados: ' + error.message, 'error');
+        }
+    }
+
+    // ============ CARREGAR CANAIS ============
+    document.getElementById('serverSelect').addEventListener('change', async function() {
+        const serverId = this.value;
+        const channelSelect = document.getElementById('channelSelect');
+        
+        if (!serverId) {
+            channelSelect.innerHTML = '<option value="">Selecione um servidor primeiro</option>';
+            return;
+        }
+
+        channelSelect.innerHTML = '<option value="">Carregando canais...</option>';
+
+        try {
+            const res = await fetch(`${API_URL}/api/channels/${serverId}`);
+            const channels = await res.json();
+            
+            channelSelect.innerHTML = '<option value="">Selecione um canal</option>';
+            
+            if (channels.error) {
+                channelSelect.innerHTML = `<option value="">${channels.error}</option>`;
+            } else {
+                channels.forEach(channel => {
+                    const option = document.createElement('option');
+                    option.value = channel.id;
+                    option.textContent = `#${channel.name}`;
+                    channelSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            channelSelect.innerHTML = `<option value="">❌ Erro ao carregar canais</option>`;
+        }
+    });
+
+    // ============ ENVIAR MENSAGEM ============
+    async function sendMessage() {
+        const serverId = document.getElementById('serverSelect').value;
+        const channelId = document.getElementById('channelSelect').value;
+        const message = document.getElementById('messageInput').value.trim();
+        const mention = document.getElementById('mentionSelect').value;
+
+        if (!serverId) {
+            showResponse('❌ Selecione um servidor!', 'error');
+            return;
+        }
+
+        if (!channelId) {
+            showResponse('❌ Selecione um canal!', 'error');
+            return;
+        }
+
+        if (!message) {
+            showResponse('❌ Digite uma mensagem!', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('sendBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Enviando...';
+
+        showResponse('📤 Enviando mensagem...', 'loading');
+
+        try {
+            const res = await fetch(`${API_URL}/api/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    serverId,
+                    channelId,
+                    message,
+                    mention
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showResponse(`✅ Mensagem enviada com sucesso!`, 'success');
+                document.getElementById('messageInput').value = '';
+            } else {
+                showResponse(`❌ ${data.error || 'Erro ao enviar mensagem'}`, 'error');
+            }
+        } catch (error) {
+            showResponse(`❌ Erro: ${error.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '📤 ENVIAR MENSAGEM';
+        }
+    }
+
+    // ============ FUNÇÕES DE UI ============
+    function showResponse(text, type) {
+        const el = document.getElementById('response');
+        el.textContent = text;
+        el.className = 'response ' + type;
+        if (type === 'loading') {
+            el.innerHTML = `<span class="loading-spinner"></span> ${text}`;
+        }
+    }
+
+    function hideResponse() {
+        document.getElementById('response').className = 'response';
+    }
+
+    // ============ CARREGAR AO ABRIR ============
+    loadData();
+
+    // Atualizar a cada 30 segundos
+    setInterval(loadData, 30000);
+</script>
+
+</body>
+</html>
