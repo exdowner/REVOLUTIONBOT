@@ -1,6 +1,55 @@
 const { Client, GatewayIntentBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
+// ============ CONFIGURAÇÃO DA GROQ ============
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+if (!GROQ_API_KEY) {
+  console.warn('⚠️ GROQ_API_KEY não configurada! O comando /ia não vai funcionar.');
+}
+
+// ============ FUNÇÃO IA ============
+async function callGroqAI(mensagem, contexto = '') {
+  if (!GROQ_API_KEY) return '❌ API da Groq não configurada.';
+
+  try {
+    const systemPrompt = contexto || 'Você é um assistente útil e inteligente chamado REVOLUTION. Responda de forma clara, direta e em português. Você pode ajudar com programação, dúvidas gerais, piadas, conselhos e muito mais.';
+    
+    const response = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'mixtral-8x7b-32768',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: mensagem }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro da API:', errorText);
+      return `❌ Erro na API: ${response.status}`;
+    }
+
+    const data = await response.json();
+    if (data.choices && data.choices.length > 0) {
+      return data.choices[0].message.content;
+    }
+    return '❌ Erro ao processar sua pergunta. Tente novamente.';
+  } catch (error) {
+    console.error('❌ ERRO NA IA:', error.message);
+    return `❌ Erro ao conectar com a IA: ${error.message}`;
+  }
+}
+
 // ============ CLIENT ============
 const client = new Client({
   intents: [
@@ -674,7 +723,7 @@ client.commands.set('nick', {
 // 51. VOICE
 client.commands.set('voice', {
   execute: async (interaction) => {
-    const member = interaction.members.cache.get(interaction.user.id);
+    const member = interaction.guild.members.cache.get(interaction.user.id);
     if (!member.voice.channel) return interaction.reply({ content: '❌ Você não está em um canal de voz!', ephemeral: true });
     const channel = member.voice.channel;
     const members = channel.members.map(m => m.user.tag).join('\n');
@@ -770,6 +819,49 @@ client.commands.set('leaderboard', {
   }
 });
 
+// ============ COMANDO IA (57) ============
+
+// 57. IA
+client.commands.set('ia', {
+  execute: async (interaction) => {
+    const pergunta = interaction.options.getString('pergunta');
+    
+    if (!pergunta) {
+      return interaction.reply({
+        content: '❌ DIGITE UMA PERGUNTA! Exemplo: `/ia pergunta:O que é Revolution?`',
+        ephemeral: true
+      });
+    }
+
+    await interaction.reply({
+      content: '🤖 **REVOLUTION IA ESTÁ PENSANDO...**'
+    });
+
+    try {
+      const resposta = await callGroqAI(pergunta);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('🤖 REVOLUTION IA')
+        .setColor('#ff0000')
+        .setDescription(resposta.length > 4000 ? resposta.substring(0, 4000) + '...' : resposta)
+        .addFields(
+          { name: '📝 PERGUNTA', value: pergunta.length > 100 ? pergunta.substring(0, 100) + '...' : pergunta, inline: false }
+        )
+        .setFooter({ text: 'REVOLUTION - INTELIGÊNCIA ARTIFICIAL' })
+        .setTimestamp();
+
+      await interaction.editReply({ content: null, embeds: [embed] });
+      
+    } catch (error) {
+      await interaction.editReply({
+        content: `❌ ERRO AO PROCESSAR SUA PERGUNTA: ${error.message}`,
+        embeds: []
+      });
+      console.error('ERRO NA IA:', error);
+    }
+  }
+});
+
 // ============ EVENTO DE XP ============
 client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.guild) return;
@@ -788,12 +880,13 @@ client.on('ready', () => {
   console.log(`🚀 Bot ${client.user.tag} está ONLINE!`);
   console.log(`📊 Servidores: ${client.guilds.cache.size}`);
   console.log(`📋 Comandos: ${client.commands.size}`);
+  console.log(`🤖 IA CARREGADA! Use /ia pergunta:`);
   
   client.user.setPresence({
     activities: [{
       name: `${client.commands.size} comandos | REVOLUTION`,
       type: 3,
-      state: 'Use / para ver os comandos'
+      state: 'Use /ia para perguntar'
     }],
     status: 'online'
   });

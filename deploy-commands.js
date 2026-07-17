@@ -1,4 +1,3 @@
-
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
@@ -60,14 +59,17 @@ const commands = [
   new SlashCommandBuilder().setName('announce').setDescription('📢 Anúncio (admin)').addStringOption(o => o.setName('mensagem').setDescription('Mensagem').setRequired(true)),
   new SlashCommandBuilder().setName('giveaway').setDescription('🎉 Sorteio (admin)').addStringOption(o => o.setName('premio').setDescription('Prêmio').setRequired(true)).addIntegerOption(o => o.setName('minutos').setDescription('Minutos').setRequired(true)),
   new SlashCommandBuilder().setName('xp').setDescription('📊 Ver XP de usuário').addUserOption(o => o.setName('usuario').setDescription('Usuário')),
-  new SlashCommandBuilder().setName('leaderboard').setDescription('🏆 Ranking de XP')
+  new SlashCommandBuilder().setName('leaderboard').setDescription('🏆 Ranking de XP'),
+  
+  // IA
+  new SlashCommandBuilder().setName('ia').setDescription('🤖 Perguntar à IA Revolution').addStringOption(o => o.setName('pergunta').setDescription('Sua pergunta').setRequired(true).setMaxLength(1000))
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
-    console.log('🚀 REGISTRANDO 56 COMANDOS...');
+    console.log('🚀 REGISTRANDO 57 COMANDOS...');
     await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands.map(cmd => cmd.toJSON()) });
     console.log(`✅ ${commands.length} COMANDOS REGISTRADOS!`);
   } catch (error) {
